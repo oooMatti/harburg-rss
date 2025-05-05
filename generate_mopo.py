@@ -44,14 +44,21 @@ async def fetch_articles():
                 article_html = await article_page.content()
                 article_soup = BeautifulSoup(article_html, "html.parser")
 
-                content_div = article_soup.select_one("div.elementor-widget-container")
-                paragraphs = content_div.select("p") if content_div else []
+                content_divs = article_soup.select("div.elementor-widget-container")
+                paragraphs = []
+                for div in content_divs:
+                     div_paragraphs = div.select("p")
+                    if len(div_paragraphs) >= 2:
+                      paragraphs = div_paragraphs
+                        break
+
                 teaser_html = "".join(str(p) for p in paragraphs[:3]) if paragraphs else "<p>Kein Inhalt gefunden.</p>"
 
                 image_html = f'<img src="{image_url}" alt="{title}" style="max-width:100%;"><br>' if image_url else ""
                 description_html = image_html + teaser_html
 
                 pub_date = datetime.now().strftime("%a, %d %b %Y %H:%M:%S +0100")
+                print("📄 Artikelbeschreibung (gekürzt):", teaser_html[:200])
                 articles.append({
                     "title": title,
                     "link": link,
