@@ -21,7 +21,7 @@ async def fetch_articles():
 
         articles = []
 
-        for box in article_boxes:
+        for box in article_boxes[:10]:  # z. B. die ersten 10 Artikel
             title_tag = box.select_one(".main-preview__title-link p")
             link_tag = box.select_one("a.main-preview__title-link")
             img_tag = box.select_one("img")
