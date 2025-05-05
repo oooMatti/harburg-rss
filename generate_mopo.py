@@ -20,7 +20,7 @@ async def fetch_articles():
 
         articles = []
 
-        for box in article_boxes[:5]:
+        for box in article_boxes:  # Keine Begrenzung mehr auf 5 Artikel
             title_tag = box.select_one(".main-preview__title-link p")
             link_tag = box.select_one("a.main-preview__title-link")
             img_tag = box.select_one("img")
@@ -39,16 +39,15 @@ async def fetch_articles():
             try:
                 article_page = await browser.new_page()
                 await article_page.goto(link, timeout=90000, wait_until='domcontentloaded')
-
                 article_html = await article_page.content()
                 article_soup = BeautifulSoup(article_html, "html.parser")
 
-                # Suche alle Absätze innerhalb der elementor-widget-container-Divs
-                paragraphs = []
-                for container in article_soup.select("div.elementor-widget-container"):
-                    paragraphs.extend(container.select("p"))
+                all_containers = article_soup.select("div.elementor-widget-container")
+                all_paragraphs = []
+                for container in all_containers:
+                    all_paragraphs += container.select("p")
 
-                teaser_html = "".join(str(p) for p in paragraphs[:3]) if paragraphs else "<p>Kein Inhalt gefunden.</p>"
+                teaser_html = "".join(str(p) for p in all_paragraphs[:]) if all_paragraphs else "<p>Kein Inhalt gefunden.</p>"
 
                 image_html = f'<img src="{image_url}" alt="{title}" style="max-width:100%;"><br>' if image_url else ""
                 description_html = image_html + teaser_html
