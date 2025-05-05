@@ -6,8 +6,16 @@ from pathlib import Path
 BASE_URL = "https://www.mopo.de"
 NEWS_URL = f"{BASE_URL}/hamburg/"
 
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/123.0.0.0 Safari/537.36"
+    )
+}
+
 def fetch_articles():
-    response = requests.get(NEWS_URL)
+    response = requests.get(NEWS_URL, headers=HEADERS)
     if response.status_code != 200:
         print(f"❌ Fehler beim Laden der Startseite ({response.status_code})")
         return []
@@ -15,38 +23,44 @@ def fetch_articles():
     soup = BeautifulSoup(response.content, "html.parser")
     articles = []
 
-    article_boxes = soup.select("div.main-preview")
+    article_boxes = soup.select("div.main-preview")  # Vorschau-Container
     print(f"🔎 {len(article_boxes)} Artikel auf der Startseite gefunden.")
 
-    for item in article_boxes[:5]:  # Anzahl der Artikel im Feed
-        title_tag = item.select_one("div.main-preview__post-title a")
-        if not title_tag:
+    for item in article_boxes[:5]:  # nur die ersten 5 Artikel
+        title_tag = item.select_one(".main-preview__post-title a p")
+        link_tag = item.select_one("a.main-preview__img-link")
+        image_tag = item.select_one("img.main-preview__img")
+
+        if not title_tag or not link_tag:
             continue
 
         title = title_tag.get_text(strip=True)
-        link = title_tag.get("href")
+        link = link_tag.get("href")
         if not link.startswith("http"):
             link = BASE_URL + link
 
         print(f"➡️ Verarbeite Artikel: {title}")
 
         # Detailseite abrufen
-        article_response = requests.get(link)
+        article_response = requests.get(link, headers=HEADERS)
         if article_response.status_code != 200:
             print(f"❌ Fehler beim Laden der Detailseite: {link}")
             continue
 
         article_soup = BeautifulSoup(article_response.content, "html.parser")
 
-        # Artikelbild
-        image_tag = article_soup.select_one("meta[property='og:image']")
-        image_url = image_tag.get("content") if image_tag else None
-        image_html = f'<img src="{image_url}" alt="{title}" style="max-width:100%;"><br>' if image_url else ""
-
-        # Artikeltext extrahieren
+        # Artikeltext
         content_container = article_soup.select_one("div.elementor-widget-container")
-        paragraphs = content_container.find_all("p") if content_container else []
+        if content_container:
+            paragraphs = content_container.find_all("p")
+        else:
+            paragraphs = []
+
         teaser_html = "".join(str(p) for p in paragraphs[:3]) if paragraphs else "<p>Kein Inhalt gefunden.</p>"
+
+        # Bild
+        image_url = image_tag["src"] if image_tag else None
+        image_html = f'<img src="{image_url}" alt="{title}" style="max-width:100%;"><br>' if image_url else ""
 
         description_html = image_html + teaser_html
 
@@ -78,7 +92,7 @@ def generate_rss(articles):
 <channel>
   <title>MOPO Hamburg – Automatischer RSS-Feed</title>
   <link>{NEWS_URL}</link>
-  <description>Automatisch generierter Feed von mopo.de/hamburg</description>
+  <description>Automatisch generierter Feed von MOPO.de (Hamburg)</description>
   <language>de-de</language>{rss_items}
 </channel>
 </rss>"""
