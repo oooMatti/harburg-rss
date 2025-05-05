@@ -42,7 +42,6 @@ async def fetch_articles():
             try:
                 article_page = await browser.new_page()
                 await article_page.goto(link, timeout=60000, wait_until='domcontentloaded')
-                await article_page.wait_for_selector("div.elementor-widget-container", timeout=10000)
                 article_html = await article_page.content()
                 article_soup = BeautifulSoup(article_html, "html.parser")
 
@@ -52,6 +51,7 @@ async def fetch_articles():
                 for div in widget_divs:
                     paragraphs.extend(div.select("p"))
 
+                # Sicherstellen, dass auch 1 oder 2 Paragraphen nicht zum Fehler führen
                 teaser_html = "".join(str(p) for p in paragraphs[:3]) if paragraphs else "<p>Kein Inhalt gefunden.</p>"
                 image_html = f'<img src="{image_url}" alt="{title}" style="max-width:100%;"><br>' if image_url else ""
                 description_html = image_html + teaser_html
