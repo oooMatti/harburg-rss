@@ -13,27 +13,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: 📥 Repository klonen
         uses: actions/checkout@v3
 
-      - name: Set up Python
+      - name: 🐍 Python einrichten
         uses: actions/setup-python@v4
         with:
           python-version: 3.10
 
-      - name: Install dependencies
+      - name: 📦 Abhängigkeiten installieren
         run: |
           python -m pip install --upgrade pip
-          pip install playwright
-          playwright install --with-deps
+          pip install -r requirements.txt
+          playwright install
 
-      - name: Run MOPO Scraper
+      - name: 📰 Feed generieren
         run: python generate_mopo.py
 
-      - name: Commit and Push RSS Feed
+      - name: 🔼 Änderungen committen
         run: |
-          git config user.name github-actions
-          git config user.email github-actions@github.com
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
           git add docs/rss_mopo.xml
-          git commit -m "🔄 Update MOPO RSS Feed" || echo "No changes"
+          git commit -m "🔄 Update rss_mopo.xml" || echo "Keine Änderungen zum Commit"
           git push
