@@ -47,18 +47,18 @@ async def fetch_articles():
                 content_divs = article_soup.select("div.elementor-widget-container")
                 paragraphs = []
                 for div in content_divs:
-                     div_paragraphs = div.select("p")
+                    div_paragraphs = div.select("p")
                     if len(div_paragraphs) >= 2:
-                      paragraphs = div_paragraphs
+                        paragraphs = div_paragraphs
                         break
 
                 teaser_html = "".join(str(p) for p in paragraphs[:3]) if paragraphs else "<p>Kein Inhalt gefunden.</p>"
+                print("📄 Artikelbeschreibung (gekürzt):", teaser_html[:200])
 
                 image_html = f'<img src="{image_url}" alt="{title}" style="max-width:100%;"><br>' if image_url else ""
                 description_html = image_html + teaser_html
 
                 pub_date = datetime.now().strftime("%a, %d %b %Y %H:%M:%S +0100")
-                print("📄 Artikelbeschreibung (gekürzt):", teaser_html[:200])
                 articles.append({
                     "title": title,
                     "link": link,
