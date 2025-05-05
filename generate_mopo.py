@@ -11,7 +11,7 @@ async def fetch_articles():
     async with async_playwright() as p:
         browser = await p.chromium.launch()
         page = await browser.new_page()
-        await page.goto(NEWS_URL)
+        await page.goto(NEWS_URL, timeout=120000, wait_until="networkidle")
 
         content = await page.content()
         soup = BeautifulSoup(content, "html.parser")
