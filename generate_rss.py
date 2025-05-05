@@ -8,10 +8,18 @@ NEWS_URL = f"{BASE_URL}/"
 
 def fetch_articles():
     response = requests.get(NEWS_URL)
+    if response.status_code != 200:
+        print(f"❌ Fehler beim Laden der News-Seite ({response.status_code})")
+        return []
+
     soup = BeautifulSoup(response.content, "html.parser")
     articles = []
 
-    for item in soup.select("div.article")[:5]:  # Anzahl nach Bedarf anpassen
+    # Artikel-Container auswählen
+    article_boxes = soup.select("div.article")
+    print(f"🔎 {len(article_boxes)} Artikel auf Übersichtsseite gefunden.")
+
+    for item in article_boxes[:5]:  # Anzahl anpassen
         title_tag = item.select_one("div.article-header h2 a")
         if not title_tag:
             continue
@@ -20,17 +28,22 @@ def fetch_articles():
         relative_link = title_tag.get("href", "")
         link = BASE_URL + relative_link
 
-        # Detailseite abrufen für den vollständigen Text
+        print(f"➡️ Artikel: {title}")
+
+        # Detailseite abrufen
         article_response = requests.get(link)
+        if article_response.status_code != 200:
+            print(f"❌ Fehler beim Laden der Detailseite: {link}")
+            continue
+
         article_soup = BeautifulSoup(article_response.content, "html.parser")
         body_tag = article_soup.select_one('[itemprop="articleBody"]')
 
-        # Optional: Nur die ersten 2 Absätze als Vorschau
         if body_tag:
             paragraphs = body_tag.select("p")
             teaser = "\n\n".join(p.get_text(strip=True) for p in paragraphs[:2])
         else:
-            teaser = "Kein Artikelinhalt gefunden."
+            teaser = "Kein Text gefunden."
 
         pub_date = datetime.now().strftime("%a, %d %b %Y %H:%M:%S +0100")
 
@@ -41,8 +54,8 @@ def fetch_articles():
             "pubDate": pub_date
         })
 
+    print(f"✅ {len(articles)} Artikel erfolgreich verarbeitet.")
     return articles
-
 
 def generate_rss(articles):
     rss_items = ""
@@ -51,7 +64,7 @@ def generate_rss(articles):
   <item>
     <title>{item['title']}</title>
     <link>{item['link']}</link>
-    <description>{item['description']}</description>
+    <description><![CDATA[{item['description']}]]></description>
     <pubDate>{item['pubDate']}</pubDate>
   </item>"""
 
@@ -68,10 +81,15 @@ def generate_rss(articles):
 
 def save_rss(content):
     Path("docs").mkdir(exist_ok=True)
-    with open("docs/rss.xml", "w", encoding="utf-8") as f:
-        f.write(content)
+    Path("docs/rss.xml").write_text(content, encoding="utf-8")
+    print("💾 Feed gespeichert in docs/rss.xml")
 
 if __name__ == "__main__":
-    articles = fetch_articles()
-    rss_content = generate_rss(articles)
-    save_rss(rss_content)
+    try:
+        articles = fetch_articles()
+        if not articles:
+            print("❗ Keine Artikel gefunden.")
+        rss_content = generate_rss(articles)
+        save_rss(rss_content)
+    except Exception as e:
+        print("❌ Fehler im Script:", e)
