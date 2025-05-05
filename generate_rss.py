@@ -41,7 +41,7 @@ def fetch_articles():
 
         if body_tag:
             paragraphs = body_tag.select("p")
-            teaser = "\n\n".join(p.get_text(strip=True) for p in paragraphs[:2])
+            teaser_html = "".join(str(p) for p in paragraphs[:2])
         else:
             teaser = "Kein Text gefunden."
 
@@ -50,7 +50,7 @@ def fetch_articles():
         articles.append({
             "title": title,
             "link": link,
-            "description": teaser,
+            "description": teaser_html,
             "pubDate": pub_date
         })
 
