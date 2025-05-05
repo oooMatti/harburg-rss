@@ -9,17 +9,16 @@ NEWS_URL = f"{BASE_URL}/"
 def fetch_articles():
     response = requests.get(NEWS_URL)
     if response.status_code != 200:
-        print(f"❌ Fehler beim Laden der News-Seite ({response.status_code})")
+        print(f"❌ Fehler beim Laden der Startseite ({response.status_code})")
         return []
 
     soup = BeautifulSoup(response.content, "html.parser")
     articles = []
 
-    # Artikel-Container auswählen
     article_boxes = soup.select("div.article")
-    print(f"🔎 {len(article_boxes)} Artikel auf Übersichtsseite gefunden.")
+    print(f"🔎 {len(article_boxes)} Artikel auf der Startseite gefunden.")
 
-    for item in article_boxes[:5]:  # Anzahl anpassen
+    for item in article_boxes[:5]:  # Anzahl der Artikel im Feed
         title_tag = item.select_one("div.article-header h2 a")
         if not title_tag:
             continue
@@ -28,7 +27,7 @@ def fetch_articles():
         relative_link = title_tag.get("href", "")
         link = BASE_URL + relative_link
 
-        print(f"➡️ Artikel: {title}")
+        print(f"➡️ Verarbeite Artikel: {title}")
 
         # Detailseite abrufen
         article_response = requests.get(link)
@@ -37,20 +36,26 @@ def fetch_articles():
             continue
 
         article_soup = BeautifulSoup(article_response.content, "html.parser")
-        body_tag = article_soup.select_one('[itemprop="articleBody"]')
 
-        if body_tag:
-            paragraphs = body_tag.select("p")
-            teaser_html = "".join(str(p) for p in paragraphs[:2])
-        else:
-            teaser = "Kein Text gefunden."
+        # Artikeltext
+        body_tag = article_soup.select_one('[itemprop="articleBody"]')
+        paragraphs = body_tag.select("p") if body_tag else []
+        teaser_html = "".join(str(p) for p in paragraphs[:2]) if paragraphs else "<p>Kein Inhalt gefunden.</p>"
+
+        # Bild
+        image_tag = article_soup.select_one("div.article-full-image img")
+        image_url = BASE_URL + image_tag["src"] if image_tag else None
+        image_html = f'<img src="{image_url}" alt="{title}" style="max-width:100%;"><br>' if image_url else ""
+
+        # Gesamtbeschreibung (Bild + Text)
+        description_html = image_html + teaser_html
 
         pub_date = datetime.now().strftime("%a, %d %b %Y %H:%M:%S +0100")
 
         articles.append({
             "title": title,
             "link": link,
-            "description": teaser_html,
+            "description": description_html,
             "pubDate": pub_date
         })
 
