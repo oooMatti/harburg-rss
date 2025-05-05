@@ -1,78 +1,59 @@
-import requests
+
+import asyncio
+from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 from datetime import datetime
-from pathlib import Path
 
-BASE_URL = "https://www.mopo.de"
-NEWS_URL = f"{BASE_URL}/hamburg/"
-
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/123.0.0.0 Safari/537.36"
-    )
-}
+BASE_URL = "https://www.mopo.de/hamburg/"
+RSS_FILE = "docs/rss_mopo.xml"
 
 def fetch_articles():
-    response = requests.get(NEWS_URL, headers=HEADERS)
-    if response.status_code != 200:
-        print(f"❌ Fehler beim Laden der Startseite ({response.status_code})")
-        return []
-
-    soup = BeautifulSoup(response.content, "html.parser")
     articles = []
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.goto(BASE_URL, timeout=60000)
+        content = page.content()
+        soup = BeautifulSoup(content, "html.parser")
 
-    article_boxes = soup.select("div.main-preview")  # Vorschau-Container
-    print(f"🔎 {len(article_boxes)} Artikel auf der Startseite gefunden.")
+        article_boxes = soup.select("div.main-preview")
+        print(f"🔎 {len(article_boxes)} Artikel auf der Startseite gefunden.")
 
-    for item in article_boxes[:5]:  # nur die ersten 5 Artikel
-        title_tag = item.select_one(".main-preview__post-title a p")
-        link_tag = item.select_one("a.main-preview__img-link")
-        image_tag = item.select_one("img.main-preview__img")
+        for item in article_boxes[:5]:
+            title_tag = item.select_one("div.main-preview__post-title a")
+            img_tag = item.select_one("img")
+            if not title_tag or not img_tag:
+                continue
 
-        if not title_tag or not link_tag:
-            continue
+            title = title_tag.get_text(strip=True)
+            link = title_tag.get("href")
+            image_url = img_tag.get("src")
 
-        title = title_tag.get_text(strip=True)
-        link = link_tag.get("href")
-        if not link.startswith("http"):
-            link = BASE_URL + link
+            print(f"➡️ Verarbeite Artikel: {title}")
 
-        print(f"➡️ Verarbeite Artikel: {title}")
+            # Detailseite öffnen
+            article_page = browser.new_page()
+            article_page.goto(link, timeout=60000)
+            article_soup = BeautifulSoup(article_page.content(), "html.parser")
+            article_page.close()
 
-        # Detailseite abrufen
-        article_response = requests.get(link, headers=HEADERS)
-        if article_response.status_code != 200:
-            print(f"❌ Fehler beim Laden der Detailseite: {link}")
-            continue
+            body_container = article_soup.select_one("div.elementor-widget-container")
+            paragraphs = body_container.select("p") if body_container else []
+            teaser_html = "".join(str(p) for p in paragraphs[:4]) if paragraphs else "<p>Kein Inhalt gefunden.</p>"
 
-        article_soup = BeautifulSoup(article_response.content, "html.parser")
+            image_html = f'<img src="{image_url}" alt="{title}" style="max-width:100%;"><br>' if image_url else ""
+            description_html = image_html + teaser_html
 
-        # Artikeltext
-        content_container = article_soup.select_one("div.elementor-widget-container")
-        if content_container:
-            paragraphs = content_container.find_all("p")
-        else:
-            paragraphs = []
+            pub_date = datetime.now().strftime("%a, %d %b %Y %H:%M:%S +0100")
 
-        teaser_html = "".join(str(p) for p in paragraphs[:3]) if paragraphs else "<p>Kein Inhalt gefunden.</p>"
+            articles.append({
+                "title": title,
+                "link": link,
+                "description": description_html,
+                "pubDate": pub_date
+            })
 
-        # Bild
-        image_url = image_tag["src"] if image_tag else None
-        image_html = f'<img src="{image_url}" alt="{title}" style="max-width:100%;"><br>' if image_url else ""
-
-        description_html = image_html + teaser_html
-
-        pub_date = datetime.now().strftime("%a, %d %b %Y %H:%M:%S +0100")
-
-        articles.append({
-            "title": title,
-            "link": link,
-            "description": description_html,
-            "pubDate": pub_date
-        })
-
+        browser.close()
     print(f"✅ {len(articles)} Artikel erfolgreich verarbeitet.")
     return articles
 
@@ -91,8 +72,8 @@ def generate_rss(articles):
 <rss version="2.0">
 <channel>
   <title>MOPO Hamburg – Automatischer RSS-Feed</title>
-  <link>{NEWS_URL}</link>
-  <description>Automatisch generierter Feed von MOPO.de (Hamburg)</description>
+  <link>{BASE_URL}</link>
+  <description>Automatisch generierter Feed von mopo.de Hamburg</description>
   <language>de-de</language>{rss_items}
 </channel>
 </rss>"""
@@ -100,8 +81,8 @@ def generate_rss(articles):
 
 def save_rss(content):
     Path("docs").mkdir(exist_ok=True)
-    Path("docs/rss_mopo.xml").write_text(content, encoding="utf-8")
-    print("💾 Feed gespeichert in docs/rss_mopo.xml")
+    Path(RSS_FILE).write_text(content, encoding="utf-8")
+    print(f"💾 Feed gespeichert in {RSS_FILE}")
 
 if __name__ == "__main__":
     try:
