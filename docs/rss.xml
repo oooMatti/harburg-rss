@@ -1,16 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <rss version="2.0">
-  <channel>
-    <title>Harburg Aktuell – Test Feed</title>
-    <link>https://harburg-aktuell.de</link>
-    <description>Dies ist ein Test-RSS-Feed</description>
-    <language>de-de</language>
-    <item>
-      <title>Beispielartikel</title>
-      <link>https://harburg-aktuell.de/artikel1.html</link>
-      <description>Ein erster Testartikel</description>
-      <pubDate>Mon, 05 May 2025 12:00:00 +0100</pubDate>
-    </item>
-  </channel>
+<channel>
+  <title>Harburg Aktuell – Automatischer RSS-Feed</title>
+  <link>https://harburg-aktuell.de/news.html</link>
+  <description>Automatisch generierter Feed von Harburg-Aktuell.de</description>
+  <language>de-de</language>
+</channel>
 </rss>
-
