@@ -22,47 +22,50 @@ async def fetch_articles():
         articles = []
 
         for box in article_boxes[:10]:  # Anzahl der Artikel im Feed
-            title_tag = box.select_one(".main-preview__title-link p")
-            link_tag = box.select_one("a.main-preview__title-link")
-            img_tag = box.select_one("img")
+    title_tag = box.select_one(".main-preview__title-link p")
+    link_tag = box.select_one("a.main-preview__title-link")
+    img_tag = box.select_one("img")
 
-            if not title_tag or not link_tag:
-                continue
+    if not title_tag or not link_tag:
+        continue
 
-            title = title_tag.get_text(strip=True)
-            link = link_tag.get("href")
-            image_url = img_tag["src"] if img_tag else None
-            if not link.startswith("http"):
-                link = BASE_URL + link
+    title = title_tag.get_text(strip=True)
+    link = link_tag.get("href")
+    image_url = img_tag["src"] if img_tag else None
+    if not link.startswith("http"):
+        link = BASE_URL + link
 
-            print(f"➡️ Verarbeite Artikel: {title}")
+    print(f"➡️ Verarbeite Artikel: {title}")
+    article_page = None  # <-- Initialisieren
 
-            try:
-                article_page = await browser.new_page()
-                await article_page.goto(link, timeout=60000, wait_until='networkidle')
-                await article_page.wait_for_selector("article", timeout=10000)
-                article_html = await article_page.content()
-                article_soup = BeautifulSoup(article_html, "html.parser")
+    try:
+        article_page = await browser.new_page()
+        await article_page.goto(link, timeout=60000, wait_until='domcontentloaded')
+        await article_page.wait_for_selector("article", timeout=10000)
+        article_html = await article_page.content()
+        article_soup = BeautifulSoup(article_html, "html.parser")
 
-                # Suche nach <p>-Tags im <article>-Tag oder Fallback auf ganze Seite
-                paragraphs = article_soup.select("article p")
-                if not paragraphs:
-                    paragraphs = article_soup.select("p")
+        paragraphs = article_soup.select("article p")
+        if not paragraphs:
+            paragraphs = article_soup.select("p")
 
-                teaser_html = "".join(str(p) for p in paragraphs[:3]) if paragraphs else "<p>Kein Inhalt gefunden.</p>"
-                image_html = f'<img src="{image_url}" alt="{title}" style="max-width:100%;"><br>' if image_url else ""
-                description_html = image_html + teaser_html
+        teaser_html = "".join(str(p) for p in paragraphs[:3]) if paragraphs else "<p>Kein Inhalt gefunden.</p>"
+        image_html = f'<img src="{image_url}" alt="{title}" style="max-width:100%;"><br>' if image_url else ""
+        description_html = image_html + teaser_html
 
-                pub_date = datetime.now().strftime("%a, %d %b %Y %H:%M:%S +0100")
-                articles.append({
-                    "title": title,
-                    "link": link,
-                    "description": description_html,
-                    "pubDate": pub_date
-                })
-                await article_page.close()
-            except Exception as e:
-                print(f"❌ Fehler beim Verarbeiten des Artikels {title}:", e)
+        pub_date = datetime.now().strftime("%a, %d %b %Y %H:%M:%S +0100")
+        articles.append({
+            "title": title,
+            "link": link,
+            "description": description_html,
+            "pubDate": pub_date
+        })
+    except Exception as e:
+        print(f"❌ Fehler beim Verarbeiten des Artikels {title}:", e)
+    finally:
+        if article_page:
+            await article_page.close()
+
 
         print(f"✅ {len(articles)} Artikel erfolgreich verarbeitet.")
         await browser.close()
