@@ -21,7 +21,7 @@ async def fetch_articles():
 
         articles = []
 
-        for box in article_boxes[:10]:  # z. B. die ersten 10 Artikel
+        for box in article_boxes[:10]:  # Begrenze auf 5 Artikel
             title_tag = box.select_one(".main-preview__title-link p")
             link_tag = box.select_one("a.main-preview__title-link")
             img_tag = box.select_one("img")
@@ -40,15 +40,16 @@ async def fetch_articles():
             try:
                 article_page = await browser.new_page()
                 await article_page.goto(link, timeout=60000, wait_until='domcontentloaded')
-
-                # Statt elementor-widget-container jetzt allgemeiner: article > div > p oder nur article p
-                await article_page.wait_for_selector("article p", timeout=15000)
+                await article_page.wait_for_selector("div.elementor-widget-container", timeout=10000)
                 article_html = await article_page.content()
                 article_soup = BeautifulSoup(article_html, "html.parser")
 
-                all_paragraphs = article_soup.select("article p")
-                teaser_html = "".join(str(p) for p in all_paragraphs[:10]) if all_paragraphs else "<p>Kein Inhalt gefunden.</p>"
+                article_divs = article_soup.select("div.elementor-widget-container")
+                paragraphs = []
+                for div in article_divs:
+                    paragraphs += div.find_all("p")
 
+                teaser_html = "".join(str(p) for p in paragraphs[:4]) if paragraphs else "<p>Kein Inhalt gefunden.</p>"
                 image_html = f'<img src="{image_url}" alt="{title}" style="max-width:100%;"><br>' if image_url else ""
                 description_html = image_html + teaser_html
 
