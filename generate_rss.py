@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 
 BASE_URL = "https://harburg-aktuell.de"
-NEWS_URL = f"{BASE_URL}/news.html"
+NEWS_URL = f"{BASE_URL}/"
 
 def fetch_articles():
     response = requests.get(NEWS_URL)
