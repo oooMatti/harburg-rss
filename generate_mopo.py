@@ -46,7 +46,7 @@ def fetch_articles():
         article_soup = BeautifulSoup(article_response.content, "html.parser")
 
         paragraphs = article_soup.select("article p")
-        teaser_html = "".join(str(p) for p in paragraphs[:2]) if paragraphs else "<p>Kein Inhalt gefunden.</p>"
+        teaser_html = "".join(str(p) for p in paragraphs) if paragraphs else "<p>Kein Inhalt gefunden.</p>"
 
         description_html = image_html + teaser_html
         pub_date = datetime.now().strftime("%a, %d %b %Y %H:%M:%S +0100")
