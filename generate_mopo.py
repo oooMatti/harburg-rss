@@ -10,8 +10,9 @@ NEWS_URL = f"{BASE_URL}/hamburg/"
 async def fetch_articles():
     async with async_playwright() as p:
         browser = await p.chromium.launch()
-        page = await browser.new_page()
-        await page.goto(NEWS_URL, timeout=120000, wait_until="networkidle")
+        page = await browser.new_page(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36")
+        await page.goto(NEWS_URL, timeout=60000, wait_until="domcontentloaded")
+        await page.wait_for_selector("div.main-preview", timeout=10000)
 
         content = await page.content()
         soup = BeautifulSoup(content, "html.parser")
@@ -20,7 +21,7 @@ async def fetch_articles():
 
         articles = []
 
-        for box in article_boxes:  # Keine Begrenzung mehr auf 5 Artikel
+        for box in article_boxes:
             title_tag = box.select_one(".main-preview__title-link p")
             link_tag = box.select_one("a.main-preview__title-link")
             img_tag = box.select_one("img")
@@ -38,7 +39,8 @@ async def fetch_articles():
 
             try:
                 article_page = await browser.new_page()
-                await article_page.goto(link, timeout=90000, wait_until='domcontentloaded')
+                await article_page.goto(link, timeout=60000, wait_until='domcontentloaded')
+                await article_page.wait_for_selector("div.elementor-widget-container", timeout=10000)
                 article_html = await article_page.content()
                 article_soup = BeautifulSoup(article_html, "html.parser")
 
@@ -47,7 +49,7 @@ async def fetch_articles():
                 for container in all_containers:
                     all_paragraphs += container.select("p")
 
-                teaser_html = "".join(str(p) for p in all_paragraphs[:]) if all_paragraphs else "<p>Kein Inhalt gefunden.</p>"
+                teaser_html = "".join(str(p) for p in all_paragraphs[:10]) if all_paragraphs else "<p>Kein Inhalt gefunden.</p>"
 
                 image_html = f'<img src="{image_url}" alt="{title}" style="max-width:100%;"><br>' if image_url else ""
                 description_html = image_html + teaser_html
