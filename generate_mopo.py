@@ -39,21 +39,16 @@ async def fetch_articles():
             try:
                 article_page = await browser.new_page()
                 await article_page.goto(link, timeout=90000, wait_until='domcontentloaded')
-                await article_page.wait_for_selector("div.elementor-widget-container", timeout=10000)
 
                 article_html = await article_page.content()
                 article_soup = BeautifulSoup(article_html, "html.parser")
 
-                content_divs = article_soup.select("div.elementor-widget-container")
+                # Suche alle Absätze innerhalb der elementor-widget-container-Divs
                 paragraphs = []
-                for div in content_divs:
-                    div_paragraphs = div.select("p")
-                    if len(div_paragraphs) >= 2:
-                        paragraphs = div_paragraphs
-                        break
+                for container in article_soup.select("div.elementor-widget-container"):
+                    paragraphs.extend(container.select("p"))
 
                 teaser_html = "".join(str(p) for p in paragraphs[:3]) if paragraphs else "<p>Kein Inhalt gefunden.</p>"
-                print("📄 Artikelbeschreibung (gekürzt):", teaser_html[:200])
 
                 image_html = f'<img src="{image_url}" alt="{title}" style="max-width:100%;"><br>' if image_url else ""
                 description_html = image_html + teaser_html
@@ -98,7 +93,7 @@ def generate_rss(articles):
 def save_rss(content):
     Path("docs").mkdir(exist_ok=True)
     Path("docs/rss_mopo.xml").write_text(content, encoding="utf-8")
-    print("💾 Feed gespeichert in docs/rss_mopo.xml")
+    print("📂 Feed gespeichert in docs/rss_mopo.xml")
 
 if __name__ == "__main__":
     try:
