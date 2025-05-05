@@ -21,7 +21,7 @@ async def fetch_articles():
 
         articles = []
 
-        for box in article_boxes[:10]:  # Begrenze auf 5 Artikel
+        for box in article_boxes[:5]:  # Begrenze auf 5 Artikel
             title_tag = box.select_one(".main-preview__title-link p")
             link_tag = box.select_one("a.main-preview__title-link")
             img_tag = box.select_one("img")
@@ -49,7 +49,7 @@ async def fetch_articles():
                 for div in article_divs:
                     paragraphs += div.find_all("p")
 
-                teaser_html = "".join(str(p) for p in paragraphs[:4]) if paragraphs else "<p>Kein Inhalt gefunden.</p>"
+                teaser_html = "".join(str(p) for p in paragraphs[:2]) if paragraphs else "<p>Kein Inhalt gefunden.</p>"
                 image_html = f'<img src="{image_url}" alt="{title}" style="max-width:100%;"><br>' if image_url else ""
                 description_html = image_html + teaser_html
 
