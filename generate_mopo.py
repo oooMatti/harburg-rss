@@ -11,7 +11,7 @@ async def fetch_articles():
     async with async_playwright() as p:
         browser = await p.chromium.launch()
         page = await browser.new_page(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36")
-        await page.goto(NEWS_URL, timeout=60000, wait_until="domcontentloaded")
+        await article_page.goto(link, timeout=60000, wait_until="domcontentloaded")
         await page.wait_for_selector("div.main-preview", timeout=10000)
 
         content = await page.content()
@@ -21,7 +21,7 @@ async def fetch_articles():
 
         articles = []
 
-        for box in article_boxes[:5]:  # Begrenze auf 5 Artikel
+        for box in article_boxes[:10]:  # Anzahl der Artikel im Feed
             title_tag = box.select_one(".main-preview__title-link p")
             link_tag = box.select_one("a.main-preview__title-link")
             img_tag = box.select_one("img")
@@ -39,17 +39,17 @@ async def fetch_articles():
 
             try:
                 article_page = await browser.new_page()
-                await article_page.goto(link, timeout=60000, wait_until='domcontentloaded')
-                await article_page.wait_for_selector("div.elementor-widget-container", timeout=10000)
+                await article_page.goto(link, timeout=60000, wait_until='networkidle')
+                await article_page.wait_for_selector("article", timeout=10000)
                 article_html = await article_page.content()
                 article_soup = BeautifulSoup(article_html, "html.parser")
 
-                article_divs = article_soup.select("div.elementor-widget-container")
-                paragraphs = []
-                for div in article_divs:
-                    paragraphs += div.find_all("p")
+                # Suche nach <p>-Tags im <article>-Tag oder Fallback auf ganze Seite
+                paragraphs = article_soup.select("article p")
+                if not paragraphs:
+                    paragraphs = article_soup.select("p")
 
-                teaser_html = "".join(str(p) for p in paragraphs[:2]) if paragraphs else "<p>Kein Inhalt gefunden.</p>"
+                teaser_html = "".join(str(p) for p in paragraphs[:3]) if paragraphs else "<p>Kein Inhalt gefunden.</p>"
                 image_html = f'<img src="{image_url}" alt="{title}" style="max-width:100%;"><br>' if image_url else ""
                 description_html = image_html + teaser_html
 
