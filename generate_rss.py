@@ -11,22 +11,38 @@ def fetch_articles():
     soup = BeautifulSoup(response.content, "html.parser")
     articles = []
 
-    for item in soup.select("div.item")[:10]:  # Beschränkt auf die neuesten 10 Artikel
-        title_tag = item.select_one("h2 a")
+    for item in soup.select("div.article")[:5]:  # Anzahl nach Bedarf anpassen
+        title_tag = item.select_one("div.article-header h2 a")
         if not title_tag:
             continue
+
         title = title_tag.get_text(strip=True)
-        link = BASE_URL + title_tag.get("href", "")
-        description_tag = item.select_one("p")
-        description = description_tag.get_text(strip=True) if description_tag else ""
-        pub_date = datetime.now().strftime("%a, %d %b %Y %H:%M:%S +0100")  # Aktuelles Datum
+        relative_link = title_tag.get("href", "")
+        link = BASE_URL + relative_link
+
+        # Detailseite abrufen für den vollständigen Text
+        article_response = requests.get(link)
+        article_soup = BeautifulSoup(article_response.content, "html.parser")
+        body_tag = article_soup.select_one('[itemprop="articleBody"]')
+
+        # Optional: Nur die ersten 2 Absätze als Vorschau
+        if body_tag:
+            paragraphs = body_tag.select("p")
+            teaser = "\n\n".join(p.get_text(strip=True) for p in paragraphs[:2])
+        else:
+            teaser = "Kein Artikelinhalt gefunden."
+
+        pub_date = datetime.now().strftime("%a, %d %b %Y %H:%M:%S +0100")
+
         articles.append({
             "title": title,
             "link": link,
-            "description": description,
+            "description": teaser,
             "pubDate": pub_date
         })
+
     return articles
+
 
 def generate_rss(articles):
     rss_items = ""
