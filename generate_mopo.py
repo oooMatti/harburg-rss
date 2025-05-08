@@ -10,6 +10,10 @@ NEWS_URL = f"{BASE_URL}/hamburg/"
 SEEN_LINKS_FILE = Path("docs/seen_links.txt")
 
 def load_seen_links():
+    SEEN_LINKS_FILE.parent.mkdir(exist_ok=True)
+    SEEN_LINKS_FILE.touch(exist_ok=True)
+    return set(SEEN_LINKS_FILE.read_text(encoding="utf-8").splitlines())
+
     if SEEN_LINKS_FILE.exists():
         return set(SEEN_LINKS_FILE.read_text(encoding="utf-8").splitlines())
     return set()
