@@ -7,7 +7,7 @@ import hashlib
 
 BASE_URL = "https://www.mopo.de"
 NEWS_URL = f"{BASE_URL}/hamburg/"
-SEEN_LINKS_FILE = Path("seen_links.txt")
+SEEN_LINKS_FILE = Path("docs/seen_links.txt")
 
 def load_seen_links():
     if SEEN_LINKS_FILE.exists():
