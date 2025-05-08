@@ -3,27 +3,18 @@ from datetime import datetime
 from pathlib import Path
 from bs4 import BeautifulSoup
 from playwright.async_api import async_playwright
-import hashlib
 
 BASE_URL = "https://www.mopo.de"
 NEWS_URL = f"{BASE_URL}/hamburg/"
-SEEN_LINKS_FILE = Path("docs/seen_links.txt")
 
-def load_seen_links():
-    SEEN_LINKS_FILE.parent.mkdir(exist_ok=True)
-    SEEN_LINKS_FILE.touch(exist_ok=True)
-    return set(SEEN_LINKS_FILE.read_text(encoding="utf-8").splitlines())
-
-    if SEEN_LINKS_FILE.exists():
-        return set(SEEN_LINKS_FILE.read_text(encoding="utf-8").splitlines())
-    return set()
-
-def save_seen_links(links):
-    SEEN_LINKS_FILE.write_text("\n".join(links), encoding="utf-8")
+def parse_date_from_text(text):
+    try:
+        return datetime.strptime(text.strip(), "%d.%m.%Y / %H:%M")
+    except Exception as e:
+        print(f"❌ Fehler beim Parsen des Datums: {e}")
+        return None
 
 async def fetch_articles():
-    seen_links = load_seen_links()
-    new_seen_links = set(seen_links)
     articles = []
 
     async with async_playwright() as p:
@@ -37,7 +28,7 @@ async def fetch_articles():
         article_boxes = soup.select("div.main-preview")
         print(f"🔎 {len(article_boxes)} Artikel auf der Startseite gefunden.")
 
-        for box in article_boxes[:20]:  # Max. 20 Artikel prüfen
+        for box in article_boxes[:15]:
             title_tag = box.select_one(".main-preview__title-link p")
             link_tag = box.select_one("a.main-preview__title-link")
             img_tag = box.select_one("img")
@@ -51,10 +42,6 @@ async def fetch_articles():
             if not link.startswith("http"):
                 link = BASE_URL + link
 
-            if link in seen_links:
-                print(f"⏭️ Bereits verarbeitet: {title}")
-                continue
-
             print(f"➡️ Verarbeite Artikel: {title}")
             article_page = None
 
@@ -64,20 +51,29 @@ async def fetch_articles():
                 article_html = await article_page.content()
                 article_soup = BeautifulSoup(article_html, "html.parser")
 
+                # Veröffentlichungsdatum prüfen
+                date_tag = article_soup.select_one("span.elementor-post-info__item--type-date")
+                if date_tag:
+                    pub_datetime = parse_date_from_text(date_tag.get_text())
+                    if not pub_datetime or pub_datetime.date() != datetime.today().date():
+                        print(f"⏭️ Artikel ist nicht von heute: {title}")
+                        continue
+                else:
+                    print(f"⏭️ Kein Datum gefunden für Artikel: {title}")
+                    continue
+
+                # Inhalt sammeln
                 paragraphs = article_soup.select("p")
-                teaser_html = "".join(str(p) for p in paragraphs[:3]) if paragraphs else "<p>Kein Inhalt gefunden.</p>"
+                teaser_html = "".join(str(p) for p in paragraphs[:4]) if paragraphs else "<p>Kein Inhalt gefunden.</p>"
                 image_html = f'<img src="{image_url}" alt="{title}" style="max-width:100%;"><br>' if image_url else ""
                 description_html = image_html + teaser_html
 
-                pub_date = datetime.now().strftime("%a, %d %b %Y %H:%M:%S +0100")
                 articles.append({
                     "title": title,
                     "link": link,
                     "description": description_html,
-                    "pubDate": pub_date
+                    "pubDate": pub_datetime.strftime("%a, %d %b %Y %H:%M:%S +0100")
                 })
-
-                new_seen_links.add(link)
 
             except Exception as e:
                 print(f"❌ Fehler beim Verarbeiten des Artikels {title}:", e)
@@ -87,7 +83,6 @@ async def fetch_articles():
 
         await browser.close()
 
-    save_seen_links(new_seen_links)
     print(f"✅ {len(articles)} neue Artikel erfolgreich verarbeitet.")
     return articles
 
