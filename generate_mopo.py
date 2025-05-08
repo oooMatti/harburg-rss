@@ -9,16 +9,13 @@ BASE_URL = "https://www.mopo.de"
 NEWS_URL = f"{BASE_URL}/hamburg/"
 SEEN_LINKS_FILE = Path("seen_links.txt")
 
-
 def load_seen_links():
     if SEEN_LINKS_FILE.exists():
         return set(SEEN_LINKS_FILE.read_text(encoding="utf-8").splitlines())
     return set()
 
-
 def save_seen_links(links):
     SEEN_LINKS_FILE.write_text("\n".join(links), encoding="utf-8")
-
 
 async def fetch_articles():
     seen_links = load_seen_links()
@@ -36,7 +33,7 @@ async def fetch_articles():
         article_boxes = soup.select("div.main-preview")
         print(f"🔎 {len(article_boxes)} Artikel auf der Startseite gefunden.")
 
-        for box in article_boxes[:15]:
+        for box in article_boxes[:20]:  # Max. 20 Artikel prüfen
             title_tag = box.select_one(".main-preview__title-link p")
             link_tag = box.select_one("a.main-preview__title-link")
             img_tag = box.select_one("img")
@@ -60,15 +57,10 @@ async def fetch_articles():
             try:
                 article_page = await browser.new_page()
                 await article_page.goto(link, timeout=60000, wait_until='domcontentloaded')
-                await article_page.wait_for_selector("div.elementor-widget-container", timeout=10000)
                 article_html = await article_page.content()
                 article_soup = BeautifulSoup(article_html, "html.parser")
 
-                widget_divs = article_soup.select("div.elementor-widget-container")
-                paragraphs = []
-                for div in widget_divs:
-                    paragraphs.extend(div.select("p"))
-
+                paragraphs = article_soup.select("p")
                 teaser_html = "".join(str(p) for p in paragraphs[:3]) if paragraphs else "<p>Kein Inhalt gefunden.</p>"
                 image_html = f'<img src="{image_url}" alt="{title}" style="max-width:100%;"><br>' if image_url else ""
                 description_html = image_html + teaser_html
@@ -95,7 +87,6 @@ async def fetch_articles():
     print(f"✅ {len(articles)} neue Artikel erfolgreich verarbeitet.")
     return articles
 
-
 def generate_rss(articles):
     rss_items = ""
     for item in articles:
@@ -118,12 +109,10 @@ def generate_rss(articles):
 </rss>"""
     return rss_feed
 
-
 def save_rss(content):
     Path("docs").mkdir(exist_ok=True)
     Path("docs/rss_mopo.xml").write_text(content, encoding="utf-8")
     print("📂 Feed gespeichert in docs/rss_mopo.xml")
-
 
 if __name__ == "__main__":
     try:
