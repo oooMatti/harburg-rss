@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 from playwright.async_api import async_playwright
 
 BASE_URL = "https://www.bild.de"
-NEWS_URL = f"{BASE_URL}/home/newsticker/news/alle-news-54190636.bild.html"
+NEWS_URL = f"{BASE_URL}/l"
 CUTOFF_DATE = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
 
 async def fetch_articles():
