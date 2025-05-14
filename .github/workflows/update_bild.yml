@@ -34,6 +34,6 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add docs/rss_mopo.xml
+          git add docs/rss_bild.xml || echo "⚠️ Nichts zum Hinzufügen"
           git commit -m "🔄 Update rss_mopo.xml" || echo "Keine Änderungen zum Commit"
           git push
