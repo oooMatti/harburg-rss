@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 from playwright.async_api import async_playwright
 
 BASE_URL = "https://www.bild.de"
-NEWS_URL = f"{BASE_URL}/inland/"
+NEWS_URL = f"{BASE_URL}/"
 
 async def fetch_articles():
     articles = []
