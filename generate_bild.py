@@ -21,7 +21,7 @@ async def fetch_articles():
         article_boxes = soup.select("article.stage-teaser")
         print(f"🔎 {len(article_boxes)} Artikel auf der Startseite gefunden.")
 
-        for box in article_boxes[:10]:
+        for box in article_boxes[:15]:
             link_tag = box.select_one("a.anchor")
             title_tag = box.select_one("h3.teaser__title")
             img_tag = box.select_one("img")
@@ -43,7 +43,7 @@ async def fetch_articles():
                 article_soup = BeautifulSoup(article_html, "html.parser")
 
                 article_body = article_soup.select("div.article-body p")
-                teaser_html = "".join(str(p) for p in article_body[:3]) if article_body else "<p>Kein Inhalt gefunden.</p>"
+                teaser_html = "".join(str(p) for p in article_body[:4]) if article_body else "<p>Kein Inhalt gefunden.</p>"
                 image_html = f'<img src="{image_url}" alt="{title}" style="max-width:100%;"><br>' if image_url else ""
                 description_html = image_html + teaser_html
 
